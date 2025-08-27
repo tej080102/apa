@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tejus — Contact & Weekly Hours</title>
+  <style>
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#0b1020;color:#eef1ff}
+    .wrap{max-width:900px;margin:0 auto;padding:20px}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .avatar{width:100px;height:auto; aspect-ratio: 959 / 1600; border-radius:18px;background-size:cover;background-position:center;background-image:url('profile.jpg');border:1px solid #2f3b6e}
+    h1{margin:0;font-size:28px}
+    .tag{color:#96a1ff;font-size:14px}
+    .card{background:#121834;border-radius:12px;padding:18px;margin-top:20px}
+    .section-title{margin:0 0 10px;font-size:18px;color:#cdd4ff}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:8px 12px;text-align:left;border-bottom:1px solid #2a3564}
+    .pill{font-size:12px;padding:4px 10px;border-radius:999px;background:#1b2552;color:#cbd3ff}
+    a{color:#7c9aff;text-decoration:none}
+    a:hover{text-decoration:underline}
+    .btn{border:1px solid #31407a;background:#18214a;padding:8px 12px;border-radius:8px;color:#eef1ff;cursor:pointer}
+    footer{opacity:.8;text-align:center;font-size:12px;margin-top:28px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div style="display:flex;align-items:center;gap:14px">
+        <div class="avatar"></div><!-- EDIT: replace profile.jpg in CSS above with your photo filename or URL -->
+        <div>
+          <h1>Tejus Paturu</h1>
+          <div class="tag">Computer Science & Data Science — Peer Advisor</div>
+        </div>
+      </div>
+      <a class="btn" id="zoomBtn" href="#" target="_blank">Join on Zoom</a>
+    </header>
+
+    <!-- HOURS -->
+    <section class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <h2 class="section-title">Office Hours</h2>
+        <span class="pill" id="weekRange"></span>
+      </div>
+      <table id="hoursTable">
+        <thead><tr><th>Day</th><th>Time</th><th>Notes</th></tr></thead>
+        <tbody id="hoursBody"></tbody>
+      </table>
+    </section>
+
+    <!-- CONTACT -->
+    <section class="card">
+      <h2 class="section-title">Contact</h2>
+      <p><strong>Email:</strong> <a id="emailLink" href="mailto:">add-your-email@example.com</a></p>
+      <p><strong>Phone:</strong> <span id="phoneText">(add yours)</span></p>
+      <p><strong>Location:</strong> Study Hub (LBB 230) • Remote (Prior Notice only)</p>
+      <p style="font-size:16px;color:#cbd3ff">If these hours don’t work for you, just email me with a couple of times that do.</p>
+    </section>
+
+    <footer><span id="foot"></span></footer>
+  </div>
+
+  <script>
+  // Run after DOM is ready to avoid null element errors
+  document.addEventListener('DOMContentLoaded', () => {
+    // ======== EDIT HERE: Weekly Hours =========
+    // Set the days you are available. Leave time as "" or "Closed" to hide the day.
+    const HOURS = {
+      Mon: { time: "", note: "" },
+      Tue: { time: "11:15-4:25 PM", note: "Study Hub(LBB 230) or Zoom by prior notice"},
+      Wed: { time: "", note: "" },
+      Thu: { time: "11:15-4:25 PM", note: "Study Hub(LBB 230) or Zoom by prior notice"},
+      Fri: { time: "", note: "" },
+      Sat: { time: "", note: "" },
+      Sun: { time: "", note: "" }
+    };
+    // ======== END EDIT ZONE =========
+
+    const DAY_KEYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    const STORAGE = { CONTACT: "tejus_contact_v1" }; // used for contact persistence only
+    const $ = (id)=>document.getElementById(id);
+
+    function startOfWeek(d){ const dt=new Date(d); const day=(dt.getDay()+6)%7; dt.setHours(0,0,0,0); dt.setDate(dt.getDate()-day); return dt; }
+    function endOfWeek(d){ const s=startOfWeek(d); const e=new Date(s); e.setDate(s.getDate()+6); e.setHours(23,59,59,999); return e; }
+    function fmtDate(d){ return d.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}); }
+
+    function loadContact(){ try{ return JSON.parse(localStorage.getItem(STORAGE.CONTACT))||{}; }catch{return{};} }
+    function saveContact(obj){ localStorage.setItem(STORAGE.CONTACT, JSON.stringify(obj)); }
+
+    function renderWeekRange(){ const el=$("weekRange"); if(!el) return; const now=new Date(); const s=startOfWeek(now); const e=endOfWeek(now); el.textContent=`This week • ${fmtDate(s)} – ${fmtDate(e)}`; }
+    function renderTimezone(){ const el=$("timezone"); if(!el) return; const tz=Intl.DateTimeFormat().resolvedOptions().timeZone; el.textContent=tz; }
+
+    function renderHours(){
+      const tbody=$("hoursBody"); if(!tbody) return;
+      tbody.innerHTML="";
+      const rows = DAY_KEYS
+        .map(d=>({ day:d, ...(HOURS[d]||{}) }))
+        .filter(x=>x.time && x.time.trim() && x.time.toLowerCase()!=="closed");
+      if(rows.length===0){
+        const tr=document.createElement('tr');
+        tr.innerHTML = `<td colspan="3">No posted hours this week — please email me to book a time.</td>`;
+        tbody.appendChild(tr);
+        return;
+      }
+      rows.forEach(({day,time,note})=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML = `<td><strong>${day}</strong></td><td>${time}</td><td>${note||''}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderContact(){
+      const c=loadContact();
+      const email=c.email||"tepa6217@colorado.edu";
+      const phone=c.phone||"7202091106";
+      const zoom=c.zoom||"https://us05web.zoom.us/j/9841667802?pwd=6NbhsDlFUe54g6N0fQsLj2P14apZUS.1";
+      const emailLink=$("emailLink"); if(emailLink){ emailLink.textContent=email; emailLink.href=`mailto:${email}`; }
+      const phoneText=$("phoneText"); if(phoneText){ phoneText.textContent=phone; }
+      const zoomBtn=$("zoomBtn"); if(zoomBtn){ zoomBtn.href=zoom; }
+    }
+
+    // Wire contact editor (guard if elements are missing)
+    const editBtn=$("editContactBtn");
+    if(editBtn){
+      editBtn.addEventListener("click", ()=>{
+        const c=loadContact();
+        const emailInput=$("emailInput"), phoneInput=$("phoneInput"), zoomInput=$("zoomInput"), dlg=$("contactDlg");
+        if(emailInput) emailInput.value=c.email||"";
+        if(phoneInput) phoneInput.value=c.phone||"";
+        if(zoomInput) zoomInput.value=c.zoom||"";
+        if(dlg && dlg.showModal) dlg.showModal();
+      });
+    }
+
+    const saveBtn=$("saveContactBtn");
+    if(saveBtn){
+      saveBtn.addEventListener("click", ()=>{
+        const emailInput=$("emailInput"), phoneInput=$("phoneInput"), zoomInput=$("zoomInput");
+        saveContact({
+          email: emailInput ? emailInput.value.trim() : "",
+          phone: phoneInput ? phoneInput.value.trim() : "",
+          zoom:  zoomInput ?  zoomInput.value.trim()  : ""
+        });
+        renderContact();
+      });
+    }
+
+    // Footer year
+    const foot=$("foot"); if(foot) foot.textContent=`© ${new Date().getFullYear()} Tejus Paturu`;
+
+    // Initial render
+    renderWeekRange();
+    renderTimezone();
+    renderHours();
+    renderContact();
+  });
+</script>
+</body>
+</html>
